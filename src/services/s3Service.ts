@@ -4,6 +4,10 @@ import {
   S3Client 
 } from '@aws-sdk/client-s3';
 import { s3Client, S3_CONFIG } from '../config/aws';
+import { Buffer } from 'buffer';
+
+// Polyfill Buffer for environments that don't support it natively
+(window as unknown as { Buffer: typeof Buffer }).Buffer = Buffer;
 
 export class S3Service {
   private client: S3Client;
@@ -13,6 +17,7 @@ export class S3Service {
   }
 
   async uploadPDF(file: File): Promise<string> {
+    console.log('Uploading file:', file);
     const fileName = `${Date.now()}-${file.name}`;
     const fileBuffer = await file.arrayBuffer();
 
@@ -28,13 +33,11 @@ export class S3Service {
   }
 
   async getAnalysisResult(fileName: string): Promise<string> {
-    // Extract the original PDF name from the timestamp-prefixed filename
-    const originalPdfName = fileName.substring(fileName.indexOf('-') + 1);
-    const analysisKey = `${originalPdfName}-analyzeexpenseresponse.txt`;
+    console.log('Getting analysis result:', fileName);
     
     const command = new GetObjectCommand({
       Bucket: S3_CONFIG.analysisBucket,
-      Key: analysisKey,
+      Key: fileName,
     });
 
     const response = await this.client.send(command);
@@ -42,7 +45,8 @@ export class S3Service {
     return analysisText || '';
   }
 
-  async pollForAnalysis(fileName: string, maxAttempts = 10): Promise<string> {
+  async pollForAnalysis(fileName: string, maxAttempts = 4): Promise<string> {
+    console.log('Polling for analysis result:', fileName);
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
       try {
         const result = await this.getAnalysisResult(fileName);
@@ -50,7 +54,7 @@ export class S3Service {
       } catch (error) {
         if ((error as any).name !== 'NoSuchKey') throw error;
       }
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await new Promise(resolve => setTimeout(resolve, 6000));
     }
     throw new Error('Analysis timeout');
   }

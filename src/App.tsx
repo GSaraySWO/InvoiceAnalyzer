@@ -2,11 +2,12 @@ import React, { useState } from 'react';
 import { Upload, FileText, AlertCircle } from 'lucide-react';
 import { PDFViewer } from './components/PDFViewer';
 import { AnalysisResult } from './components/AnalysisResult';
+import { useS3Upload } from './hooks/useS3Upload';
 
 function App() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [analysis, setAnalysis] = useState<string>('');
-  const [isLoading, setIsLoading] = useState(false);
+  const { uploadAndAnalyze, isUploading, error: uploadError } = useS3Upload();
   const [error, setError] = useState<string>('');
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -14,6 +15,7 @@ function App() {
     if (file && file.type === 'application/pdf') {
       setSelectedFile(file);
       setError('');
+      setAnalysis('');
     } else {
       setError('Please select a valid PDF file');
     }
@@ -22,18 +24,13 @@ function App() {
   const handleAnalyze = async () => {
     if (!selectedFile) return;
 
-    setIsLoading(true);
-    setError('');
-
     try {
-      // Simulate API call to upload to S3 and get analysis
-      // Replace with actual AWS S3 integration
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      setAnalysis('Sample analysis result for the uploaded PDF...\n\nThis is where the actual analysis from the S3 bucket would appear.');
+      const result = await uploadAndAnalyze(selectedFile);
+      setAnalysis(result);
+      setError('');
     } catch (err) {
-      setError('Failed to analyze the PDF. Please try again.');
-    } finally {
-      setIsLoading(false);
+      console.error('Error details:', err);
+      setError(uploadError || 'Failed to analyze the PDF. Please try again.');
     }
   };
 
@@ -58,11 +55,11 @@ function App() {
             
             <button
               onClick={handleAnalyze}
-              disabled={!selectedFile || isLoading}
+              disabled={!selectedFile || isUploading}
               className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
             >
               <FileText className="w-5 h-5 mr-2" />
-              Analyze PDF
+              {isUploading ? 'Analyzing...' : 'Analyze PDF'}
             </button>
           </div>
 
@@ -91,7 +88,7 @@ function App() {
           <div className="bg-white rounded-xl shadow-lg p-6">
             <h2 className="text-xl font-semibold mb-4">Analysis Result</h2>
             <div className="h-[700px]">
-              <AnalysisResult content={analysis} isLoading={isLoading} />
+              <AnalysisResult content={analysis} isLoading={isUploading} />
             </div>
           </div>
         </div>
