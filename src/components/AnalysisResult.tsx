@@ -24,7 +24,7 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({ content, isLoadi
 
   return (
     <div className="h-full overflow-auto bg-white rounded-lg shadow-inner p-6">
-      <pre className="whitespace-pre-wrap font-mono text-sm">{content}</pre>
+      <pre className="whitespace-pre-wrap font-mono text-xs">{content}</pre>
     </div>
   );
 };
